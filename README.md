@@ -23,7 +23,7 @@ A comprehensive GPU benchmarking tool designed specifically for AI workloads. Me
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Gpu-Ai-Bench.git
+git clone https://github.com/Hiphex/Gpu-Ai-Bench.git
 cd Gpu-Ai-Bench
 ```
 
@@ -239,7 +239,7 @@ If you use this benchmark in your research or projects, please cite:
 
 ```
 GPU AI Benchmark (2025)
-https://github.com/yourusername/Gpu-Ai-Bench
+https://github.com/Hiphex/Gpu-Ai-Bench
 ```
 
 ## Support

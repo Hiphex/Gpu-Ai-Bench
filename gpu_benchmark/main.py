@@ -133,7 +133,7 @@ Examples:
   # Export to both JSON and CSV
   python -m gpu_benchmark.main --all --json results.json --csv results.csv
 
-For more information, visit: https://github.com/yourusername/gpu-ai-bench
+For more information, visit: https://github.com/Hiphex/Gpu-Ai-Bench
         """
     )
 
