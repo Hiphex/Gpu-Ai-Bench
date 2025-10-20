@@ -55,8 +55,22 @@ class MemoryBenchmark:
             # MPS uses unified memory, get from system
             allocated_memory = torch.mps.current_allocated_memory()
             reserved_memory = 0  # MPS doesn't have reserved memory concept
-            # Estimate total (will be filled from gpu_info if available)
-            total_memory = allocated_memory * 2  # Conservative estimate
+
+            # Get total system memory for MPS
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ['sysctl', '-n', 'hw.memsize'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                total_memory_bytes = int(result.stdout.strip())
+                # Unified memory, typically ~75% available for GPU
+                total_memory = int(total_memory_bytes * 0.75)
+            except:
+                # Fallback: use allocated memory estimate
+                total_memory = max(allocated_memory * 10, 8 * 1024**3)  # At least 8GB estimate
         else:
             total_memory = 0
             allocated_memory = 0
@@ -161,7 +175,9 @@ class MemoryBenchmark:
 
     def _measure_h2d_bandwidth(self, num_elements: int) -> float:
         """Measure host-to-device memory bandwidth"""
-        src = torch.randn(num_elements, dtype=torch.float32, device='cpu', pin_memory=True)
+        # Pin memory only for CUDA (not supported on MPS)
+        use_pinned = (self.device.type == 'cuda')
+        src = torch.randn(num_elements, dtype=torch.float32, device='cpu', pin_memory=use_pinned)
 
         # Warmup
         for _ in range(self.warmup_iterations):

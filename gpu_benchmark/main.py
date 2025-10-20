@@ -25,7 +25,7 @@ def print_banner():
     ║           GPU AI BENCHMARK TOOL v1.0.0                    ║
     ║                                                           ║
     ║      Comprehensive GPU Performance Testing for AI         ║
-    ║      Supports NVIDIA CUDA and AMD ROCm                    ║
+    ║    Supports NVIDIA CUDA, AMD ROCm, Apple Silicon MPS      ║
     ║                                                           ║
     ╚═══════════════════════════════════════════════════════════╝
     """

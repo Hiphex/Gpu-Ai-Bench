@@ -48,6 +48,7 @@ class GPUDetector:
             "backend": "MPS",
             "platform": platform.system(),
             "pytorch_version": torch.__version__,
+            "name": None,  # Will be set from device_name
             "device_name": None,
             "gpu_family": None,
             "total_memory_gb": None,
@@ -103,6 +104,9 @@ class GPUDetector:
         # Set defaults if detection failed
         if not info["device_name"]:
             info["device_name"] = "Apple Silicon GPU (MPS)"
+
+        # Set name field for consistency with CUDA/ROCm
+        info["name"] = info["device_name"]
 
         return info
 

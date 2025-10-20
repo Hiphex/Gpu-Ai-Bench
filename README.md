@@ -186,10 +186,24 @@ The CSV file contains a flattened view with one row per metric, making it easy t
 
 ## Performance Tips
 
+### General
 1. **Close Background Applications**: For accurate results, close other GPU-intensive applications
 2. **Thermal Management**: Ensure adequate cooling for sustained performance
 3. **Power Settings**: Use maximum performance power mode
 4. **Multiple Runs**: Run the benchmark 2-3 times and average the results for consistency
+
+### Apple Silicon Specific
+1. **Plug In Your Mac**: Performance is significantly reduced on battery power
+2. **Free Up RAM**: Unified memory is shared - close memory-intensive apps (Chrome, Docker, etc.)
+3. **Disable Low Power Mode**: System Preferences > Battery > disable Low Power Mode
+4. **Allow Thermal Stabilization**: First run may be slower, subsequent runs are faster
+5. **Expected Performance Ranges**:
+   - **M1/M2**: 3-6 TFLOPS FP32, 10-20 TFLOPS FP16
+   - **M1/M2 Pro/Max**: 5-10 TFLOPS FP32, 15-30 TFLOPS FP16
+   - **M3/M3 Pro/Max**: 6-12 TFLOPS FP32, 20-40 TFLOPS FP16
+   - **M4**: 8-15 TFLOPS FP32, 25-50 TFLOPS FP16
+
+**Note**: MPS backend may show lower performance than theoretical peak due to optimization maturity. CUDA has decades of optimization while MPS is relatively new.
 
 ## Troubleshooting
 
