@@ -1,7 +1,7 @@
 """
 GPU AI Benchmark Tool
 Benchmarks GPU performance for AI workloads including TFLOPS, memory bandwidth, and real-world tests.
-Supports NVIDIA CUDA and AMD ROCm GPUs.
+Supports NVIDIA CUDA, AMD ROCm, and Apple Silicon (MPS) GPUs.
 """
 
 __version__ = "1.0.0"

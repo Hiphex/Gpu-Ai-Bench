@@ -17,6 +17,13 @@ class FLOPSBenchmark:
         self.test_iterations = test_iterations
         self.results = {}
 
+    def _synchronize(self):
+        """Synchronize device (works for CUDA, ROCm, and MPS)"""
+        if self.device.type == 'cuda':
+            torch.cuda.synchronize()
+        elif self.device.type == 'mps':
+            torch.mps.synchronize()
+
     def run_all(self) -> Dict:
         """Run all FLOPS benchmarks"""
         print("\n" + "="*60)
@@ -72,7 +79,7 @@ class FLOPSBenchmark:
                         C = torch.matmul(A.to(torch.float32), B.to(torch.float32))
                     else:
                         C = torch.matmul(A, B)
-                    torch.cuda.synchronize()
+                    self._synchronize()
 
                 # Benchmark
                 start_time = time.perf_counter()
@@ -81,7 +88,7 @@ class FLOPSBenchmark:
                         C = torch.matmul(A.to(torch.float32), B.to(torch.float32))
                     else:
                         C = torch.matmul(A, B)
-                torch.cuda.synchronize()
+                self._synchronize()
                 end_time = time.perf_counter()
 
                 elapsed_time = (end_time - start_time) / self.test_iterations
@@ -102,7 +109,10 @@ class FLOPSBenchmark:
 
                 # Clean up
                 del A, B, C
-                torch.cuda.empty_cache()
+                if self.device.type == 'cuda':
+                    torch.cuda.empty_cache()
+                elif self.device.type == 'mps':
+                    torch.mps.empty_cache()
 
             except RuntimeError as e:
                 print(f"    Skipped (error: {e})")

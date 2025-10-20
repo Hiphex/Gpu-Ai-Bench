@@ -1,6 +1,6 @@
 """
 GPU Detection Module
-Detects and identifies NVIDIA (CUDA) and AMD (ROCm) GPUs
+Detects and identifies NVIDIA (CUDA), AMD (ROCm), and Apple Silicon (MPS) GPUs
 """
 
 import torch
@@ -14,18 +14,99 @@ class GPUDetector:
     def __init__(self):
         self.device = None
         self.gpu_type = None
+        self.backend = None
         self.gpu_info = {}
         self._detect_gpu()
 
     def _detect_gpu(self):
         """Detect available GPU and gather information"""
-        if not torch.cuda.is_available():
-            raise RuntimeError("No CUDA-compatible GPU detected. Please ensure PyTorch is installed with CUDA/ROCm support.")
+        # Check for MPS (Apple Silicon) first
+        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+            self.backend = "MPS"
+            self.gpu_type = "APPLE"
+            self.gpu_info = self._gather_mps_info()
+        # Check for CUDA (NVIDIA) or ROCm (AMD)
+        elif torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+            self.backend = "CUDA" if torch.version.cuda else "ROCm"
+            self.gpu_info = self._gather_cuda_info()
+        else:
+            raise RuntimeError(
+                "No compatible GPU detected. Please ensure PyTorch is installed with GPU support:\n"
+                "  - NVIDIA: Install with CUDA support\n"
+                "  - AMD: Install with ROCm support\n"
+                "  - Apple Silicon: Install PyTorch 2.0+ with MPS support"
+            )
 
-        self.device = torch.device("cuda:0")
-        self.gpu_info = self._gather_gpu_info()
+    def _gather_mps_info(self) -> Dict:
+        """Gather Apple Silicon MPS GPU information"""
+        import subprocess
 
-    def _gather_gpu_info(self) -> Dict:
+        info = {
+            "vendor": "Apple",
+            "backend": "MPS",
+            "platform": platform.system(),
+            "pytorch_version": torch.__version__,
+            "device_name": None,
+            "gpu_family": None,
+            "total_memory_gb": None,
+        }
+
+        # Try to get system info using system_profiler on macOS
+        try:
+            result = subprocess.run(
+                ['system_profiler', 'SPDisplaysDataType'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            output = result.stdout
+
+            # Parse chip information
+            for line in output.split('\n'):
+                if 'Chipset Model:' in line or 'Graphics:' in line:
+                    info["device_name"] = line.split(':', 1)[1].strip()
+                elif 'Metal' in line and 'Family' in line:
+                    info["gpu_family"] = line.split(':', 1)[1].strip()
+        except:
+            pass
+
+        # Try to get CPU info which includes GPU on Apple Silicon
+        try:
+            result = subprocess.run(
+                ['sysctl', '-n', 'machdep.cpu.brand_string'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            cpu_info = result.stdout.strip()
+            if not info["device_name"]:
+                info["device_name"] = cpu_info
+        except:
+            pass
+
+        # Estimate memory (Apple Silicon uses unified memory)
+        try:
+            result = subprocess.run(
+                ['sysctl', '-n', 'hw.memsize'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            total_memory_bytes = int(result.stdout.strip())
+            # Unified memory, typically ~75% available for GPU
+            info["total_memory_gb"] = (total_memory_bytes / (1024**3)) * 0.75
+        except:
+            pass
+
+        # Set defaults if detection failed
+        if not info["device_name"]:
+            info["device_name"] = "Apple Silicon GPU (MPS)"
+
+        return info
+
+    def _gather_cuda_info(self) -> Dict:
         """Gather detailed GPU information"""
         info = {
             "name": torch.cuda.get_device_name(0),
@@ -37,7 +118,7 @@ class GPUDetector:
             "platform": platform.system(),
             "pytorch_version": torch.__version__,
             "cuda_version": torch.version.cuda if torch.version.cuda else "N/A",
-            "backend": "CUDA" if torch.version.cuda else "ROCm"
+            "backend": self.backend
         }
 
         # Get compute capability

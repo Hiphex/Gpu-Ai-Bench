@@ -17,6 +17,20 @@ class MemoryBenchmark:
         self.test_iterations = test_iterations
         self.results = {}
 
+    def _synchronize(self):
+        """Synchronize device (works for CUDA, ROCm, and MPS)"""
+        if self.device.type == 'cuda':
+            self._synchronize()
+        elif self.device.type == 'mps':
+            torch.mps.synchronize()
+
+    def _empty_cache(self):
+        """Empty GPU cache"""
+        if self.device.type == 'cuda':
+            self._empty_cache()
+        elif self.device.type == 'mps':
+            torch.mps.empty_cache()
+
     def run_all(self) -> Dict:
         """Run all memory benchmarks"""
         print("\n" + "="*60)
@@ -33,9 +47,20 @@ class MemoryBenchmark:
 
     def _get_memory_info(self) -> Dict:
         """Get GPU memory information"""
-        total_memory = torch.cuda.get_device_properties(self.device).total_memory
-        allocated_memory = torch.cuda.memory_allocated(self.device)
-        reserved_memory = torch.cuda.memory_reserved(self.device)
+        if self.device.type == 'cuda':
+            total_memory = torch.cuda.get_device_properties(self.device).total_memory
+            allocated_memory = torch.cuda.memory_allocated(self.device)
+            reserved_memory = torch.cuda.memory_reserved(self.device)
+        elif self.device.type == 'mps':
+            # MPS uses unified memory, get from system
+            allocated_memory = torch.mps.current_allocated_memory()
+            reserved_memory = 0  # MPS doesn't have reserved memory concept
+            # Estimate total (will be filled from gpu_info if available)
+            total_memory = allocated_memory * 2  # Conservative estimate
+        else:
+            total_memory = 0
+            allocated_memory = 0
+            reserved_memory = 0
 
         info = {
             "total_gb": total_memory / (1024**3),
@@ -116,13 +141,13 @@ class MemoryBenchmark:
         # Warmup
         for _ in range(self.warmup_iterations):
             dst.copy_(src)
-            torch.cuda.synchronize()
+            self._synchronize()
 
         # Benchmark
         start_time = time.perf_counter()
         for _ in range(self.test_iterations):
             dst.copy_(src)
-        torch.cuda.synchronize()
+        self._synchronize()
         end_time = time.perf_counter()
 
         elapsed_time = (end_time - start_time) / self.test_iterations
@@ -130,7 +155,7 @@ class MemoryBenchmark:
         bandwidth_gbs = (bytes_transferred / elapsed_time) / (1024**3)
 
         del src, dst
-        torch.cuda.empty_cache()
+        self._empty_cache()
 
         return bandwidth_gbs
 
@@ -141,13 +166,13 @@ class MemoryBenchmark:
         # Warmup
         for _ in range(self.warmup_iterations):
             dst = src.to(self.device, non_blocking=False)
-            torch.cuda.synchronize()
+            self._synchronize()
 
         # Benchmark
         start_time = time.perf_counter()
         for _ in range(self.test_iterations):
             dst = src.to(self.device, non_blocking=False)
-        torch.cuda.synchronize()
+        self._synchronize()
         end_time = time.perf_counter()
 
         elapsed_time = (end_time - start_time) / self.test_iterations
@@ -155,7 +180,7 @@ class MemoryBenchmark:
         bandwidth_gbs = (bytes_transferred / elapsed_time) / (1024**3)
 
         del src, dst
-        torch.cuda.empty_cache()
+        self._empty_cache()
 
         return bandwidth_gbs
 
@@ -166,13 +191,13 @@ class MemoryBenchmark:
         # Warmup
         for _ in range(self.warmup_iterations):
             dst = src.to('cpu', non_blocking=False)
-            torch.cuda.synchronize()
+            self._synchronize()
 
         # Benchmark
         start_time = time.perf_counter()
         for _ in range(self.test_iterations):
             dst = src.to('cpu', non_blocking=False)
-        torch.cuda.synchronize()
+        self._synchronize()
         end_time = time.perf_counter()
 
         elapsed_time = (end_time - start_time) / self.test_iterations
@@ -180,7 +205,7 @@ class MemoryBenchmark:
         bandwidth_gbs = (bytes_transferred / elapsed_time) / (1024**3)
 
         del src, dst
-        torch.cuda.empty_cache()
+        self._empty_cache()
 
         return bandwidth_gbs
 

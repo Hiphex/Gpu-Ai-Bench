@@ -18,6 +18,20 @@ class WorkloadBenchmark:
         self.test_iterations = test_iterations
         self.results = {}
 
+    def _synchronize(self):
+        """Synchronize device (works for CUDA, ROCm, and MPS)"""
+        if self.device.type == 'cuda':
+            torch.cuda.synchronize()
+        elif self.device.type == 'mps':
+            torch.mps.synchronize()
+
+    def _empty_cache(self):
+        """Empty GPU cache"""
+        if self.device.type == 'cuda':
+            torch.cuda.empty_cache()
+        elif self.device.type == 'mps':
+            torch.mps.empty_cache()
+
     def run_all(self) -> Dict:
         """Run all workload benchmarks"""
         print("\n" + "="*60)
@@ -62,13 +76,13 @@ class WorkloadBenchmark:
                 # Warmup
                 for _ in range(self.warmup_iterations):
                     output = conv(input_tensor)
-                    torch.cuda.synchronize()
+                    self._synchronize()
 
                 # Benchmark
                 start_time = time.perf_counter()
                 for _ in range(self.test_iterations):
                     output = conv(input_tensor)
-                torch.cuda.synchronize()
+                self._synchronize()
                 end_time = time.perf_counter()
 
                 elapsed_time = (end_time - start_time) / self.test_iterations
@@ -84,7 +98,7 @@ class WorkloadBenchmark:
                 print(f"    Throughput: {throughput:.2f} img/s")
 
                 del conv, input_tensor, output
-                torch.cuda.empty_cache()
+                self._empty_cache()
 
             except Exception as e:
                 print(f"    Error: {e}")
@@ -123,13 +137,13 @@ class WorkloadBenchmark:
                 # Warmup
                 for _ in range(self.warmup_iterations):
                     output, _ = attention(query, key, value)
-                    torch.cuda.synchronize()
+                    self._synchronize()
 
                 # Benchmark
                 start_time = time.perf_counter()
                 for _ in range(self.test_iterations):
                     output, _ = attention(query, key, value)
-                torch.cuda.synchronize()
+                self._synchronize()
                 end_time = time.perf_counter()
 
                 elapsed_time = (end_time - start_time) / self.test_iterations
@@ -145,7 +159,7 @@ class WorkloadBenchmark:
                 print(f"    Throughput: {throughput:.2f} tokens/s")
 
                 del attention, query, key, value, output
-                torch.cuda.empty_cache()
+                self._empty_cache()
 
             except Exception as e:
                 print(f"    Error: {e}")
@@ -181,13 +195,13 @@ class WorkloadBenchmark:
                 # Warmup
                 for _ in range(self.warmup_iterations):
                     output = op_func(input_tensor)
-                    torch.cuda.synchronize()
+                    self._synchronize()
 
                 # Benchmark
                 start_time = time.perf_counter()
                 for _ in range(self.test_iterations):
                     output = op_func(input_tensor)
-                torch.cuda.synchronize()
+                self._synchronize()
                 end_time = time.perf_counter()
 
                 elapsed_time = (end_time - start_time) / self.test_iterations
@@ -201,7 +215,7 @@ class WorkloadBenchmark:
                 print(f"  {op_name}: {elapsed_time * 1000:.2f} ms, {throughput_gb_s:.2f} GB/s")
 
                 del input_tensor, output
-                torch.cuda.empty_cache()
+                self._empty_cache()
 
             except Exception as e:
                 print(f"  {op_name}: Error - {e}")
@@ -232,13 +246,13 @@ class WorkloadBenchmark:
                 # Warmup
                 for _ in range(self.warmup_iterations):
                     output = op_func(input_tensor)
-                    torch.cuda.synchronize()
+                    self._synchronize()
 
                 # Benchmark
                 start_time = time.perf_counter()
                 for _ in range(self.test_iterations):
                     output = op_func(input_tensor)
-                torch.cuda.synchronize()
+                self._synchronize()
                 end_time = time.perf_counter()
 
                 elapsed_time = (end_time - start_time) / self.test_iterations
@@ -252,7 +266,7 @@ class WorkloadBenchmark:
                 print(f"  {op_name}: {elapsed_time * 1000:.2f} ms, {throughput_gb_s:.2f} GB/s")
 
                 del input_tensor, output
-                torch.cuda.empty_cache()
+                self._empty_cache()
 
             except Exception as e:
                 print(f"  {op_name}: Error - {e}")

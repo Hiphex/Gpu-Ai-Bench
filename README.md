@@ -2,12 +2,14 @@
 
 A comprehensive GPU benchmarking tool designed specifically for AI workloads. Measures TFLOPS performance (FP16/FP8), memory bandwidth, power consumption, and real-world AI operation throughput.
 
+**Supports**: NVIDIA (CUDA), AMD (ROCm), and Apple Silicon (M1/M2/M3/M4)
+
 ## Features
 
-- **Multi-Platform Support**: Works with both NVIDIA CUDA and AMD ROCm GPUs
+- **Multi-Platform Support**: Works with NVIDIA CUDA, AMD ROCm, and Apple Silicon (MPS) GPUs
 - **Precision Testing**: Benchmarks FP32, FP16, and FP8 operations
 - **Memory Analysis**: Measures bandwidth (device-to-device, host-to-device, device-to-host)
-- **Power Monitoring**: Tracks power consumption during idle and stress tests (NVIDIA GPUs)
+- **Power Monitoring**: Tracks power consumption during idle and stress tests (NVIDIA GPUs only)
 - **Real-World AI Workloads**: Tests convolutions, attention mechanisms, and common operations
 - **Export Results**: Save results to JSON and CSV formats
 - **Detailed Reporting**: Comprehensive performance metrics and summaries
@@ -15,9 +17,10 @@ A comprehensive GPU benchmarking tool designed specifically for AI workloads. Me
 ## Requirements
 
 - Python 3.8 or higher
-- PyTorch 2.0+ with CUDA or ROCm support
-- NVIDIA GPU with CUDA drivers (for NVIDIA GPUs)
-- AMD GPU with ROCm support (for AMD GPUs)
+- PyTorch 2.0+ with GPU support (CUDA, ROCm, or MPS)
+- **NVIDIA GPUs**: CUDA drivers
+- **AMD GPUs**: ROCm support
+- **Apple Silicon**: M1/M2/M3/M4 with macOS 12.3+
 
 ## Installation
 
@@ -44,6 +47,18 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 # For AMD ROCm
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/rocm5.7
+
+# For Apple Silicon (M1/M2/M3/M4) - use default PyTorch with MPS support
+pip install torch torchvision torchaudio
+```
+
+**Verify GPU is detected:**
+```bash
+# For NVIDIA/AMD
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+
+# For Apple Silicon
+python -c "import torch; print(f'MPS available: {torch.backends.mps.is_available()}')"
 ```
 
 ## Usage
@@ -124,11 +139,13 @@ Tests memory subsystem performance:
 - **Device-to-Host Bandwidth**: GPU to CPU transfer speed
 
 ### 3. Power Benchmark
-Monitors power consumption (NVIDIA GPUs only):
+Monitors power consumption (**NVIDIA GPUs only** - requires `pynvml`):
 - **Power Limit**: Maximum allowed power draw
 - **Idle Power**: Power consumption at rest
 - **Stress Test**: Power draw under full load
 - **Temperature Monitoring**: GPU temperature during tests
+
+**Note**: Power monitoring is not available on AMD or Apple Silicon GPUs.
 
 ### 4. AI Workload Benchmark
 Tests real-world AI operations:
@@ -178,21 +195,32 @@ The CSV file contains a flattened view with one row per metric, making it easy t
 
 ### No GPU Detected
 ```
-Error: No CUDA-compatible GPU detected
+Error: No compatible GPU detected
 ```
-**Solution**: Ensure PyTorch is installed with CUDA/ROCm support. Check installation:
+**Solution**: Ensure PyTorch is installed with GPU support. Check installation:
 ```bash
-python -c "import torch; print(torch.cuda.is_available())"
+# For NVIDIA/AMD
+python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
+
+# For Apple Silicon
+python -c "import torch; print(f'MPS: {torch.backends.mps.is_available()}')"
 ```
+
+**Apple Silicon Note**: If MPS is not available, ensure you have:
+- macOS 12.3 or later
+- PyTorch 2.0 or later
+- Run: `pip install --upgrade torch torchvision torchaudio`
 
 ### Out of Memory Errors
 ```
-RuntimeError: CUDA out of memory
+RuntimeError: CUDA/MPS out of memory
 ```
 **Solution**: Close other GPU applications or reduce test iterations:
 ```bash
 python benchmark.py --all --iterations 50
 ```
+
+**Apple Silicon Note**: Unified memory is shared between CPU and GPU. Close memory-intensive applications to free up more RAM for GPU use.
 
 ### Power Monitoring Not Available
 ```
