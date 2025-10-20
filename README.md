@@ -1,18 +1,21 @@
 # GPU AI Benchmark
 
-A comprehensive GPU benchmarking tool designed specifically for AI workloads. Measures TFLOPS performance (FP16/FP8), memory bandwidth, power consumption, and real-world AI operation throughput.
+A comprehensive, production-grade GPU benchmarking tool designed specifically for AI workloads. Measures TFLOPS performance (FP32/TF32/BF16/FP16/FP8), memory bandwidth, power consumption, and real-world AI operation throughput.
 
 **Supports**: NVIDIA (CUDA), AMD (ROCm), and Apple Silicon (M1/M2/M3/M4)
 
-## Features
+## ✨ Key Features
 
 - **Multi-Platform Support**: Works with NVIDIA CUDA, AMD ROCm, and Apple Silicon (MPS) GPUs
-- **Precision Testing**: Benchmarks FP32, FP16, and FP8 operations
-- **Memory Analysis**: Measures bandwidth (device-to-device, host-to-device, device-to-host)
-- **Power Monitoring**: Tracks power consumption during idle and stress tests (NVIDIA GPUs only)
-- **Real-World AI Workloads**: Tests convolutions, attention mechanisms, and common operations
-- **Export Results**: Save results to JSON and CSV formats
-- **Detailed Reporting**: Comprehensive performance metrics and summaries
+- **Precision Testing**: FP32, TF32 (NVIDIA), BF16, FP16, and FP8 operations
+- **Advanced Timing**: GPU event-based timing (CUDA/ROCm) with statistical analysis (median, p10/p90)
+- **Memory Analysis**: Pinned vs pageable transfers, bandwidth measurement (D2D, H2D, D2H)
+- **Power Monitoring**: Multi-vendor support (NVIDIA pynvml, AMD rocm-smi, Apple powermetrics)
+- **Roofline Analysis**: Understand compute vs memory bottlenecks
+- **SDPA Backends**: Test FlashAttention, Memory-Efficient, and Math backends
+- **Export Results**: JSON and CSV with comprehensive metadata
+
+📖 **[See Advanced Features Documentation](ADVANCED_FEATURES.md)** for detailed information about precision control, roofline analysis, power monitoring, and more.
 
 ## Requirements
 
