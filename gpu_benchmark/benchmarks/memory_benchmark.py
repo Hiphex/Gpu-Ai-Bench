@@ -20,14 +20,14 @@ class MemoryBenchmark:
     def _synchronize(self):
         """Synchronize device (works for CUDA, ROCm, and MPS)"""
         if self.device.type == 'cuda':
-            self._synchronize()
+            torch.cuda.synchronize()
         elif self.device.type == 'mps':
             torch.mps.synchronize()
 
     def _empty_cache(self):
         """Empty GPU cache"""
         if self.device.type == 'cuda':
-            self._empty_cache()
+            torch.cuda.empty_cache()
         elif self.device.type == 'mps':
             torch.mps.empty_cache()
 
