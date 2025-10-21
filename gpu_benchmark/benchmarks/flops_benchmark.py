@@ -69,6 +69,10 @@ class FLOPSBenchmark:
                     # For INT8, we use a different approach
                     A = torch.randint(-128, 127, (M, K), dtype=dtype, device=self.device)
                     B = torch.randint(-128, 127, (K, N), dtype=dtype, device=self.device)
+                elif dtype == torch.float8_e4m3fn:
+                    # FP8 doesn't support randn, so create from FP16 and cast
+                    A = torch.randn(M, K, dtype=torch.float16, device=self.device).to(dtype)
+                    B = torch.randn(K, N, dtype=torch.float16, device=self.device).to(dtype)
                 else:
                     A = torch.randn(M, K, dtype=dtype, device=self.device)
                     B = torch.randn(K, N, dtype=dtype, device=self.device)

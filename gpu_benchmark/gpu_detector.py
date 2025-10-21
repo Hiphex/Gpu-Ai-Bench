@@ -146,10 +146,18 @@ class GPUDetector:
             self.gpu_type = "UNKNOWN"
             info["vendor"] = "UNKNOWN"
 
-        # Try to get additional NVIDIA-specific info using pynvml
+        # Try to get additional NVIDIA-specific info using nvidia-ml-py (pynvml)
         if self.gpu_type == "NVIDIA":
             try:
-                import pynvml
+                # Try nvidia-ml-py first (recommended), fall back to pynvml
+                try:
+                    import pynvml
+                except ImportError:
+                    # If neither is available, skip NVML features
+                    info["power_limit_w"] = None
+                    info["memory_bandwidth_gbs"] = None
+                    return info
+
                 pynvml.nvmlInit()
                 handle = pynvml.nvmlDeviceGetHandleByIndex(0)
 
@@ -160,18 +168,24 @@ class GPUDetector:
                 except:
                     info["power_limit_w"] = None
 
-                # Get memory info
+                # Get memory bandwidth from NVML
                 try:
-                    mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                    info["memory_bandwidth_gbs"] = self._get_memory_bandwidth(props)
+                    # Get memory clock and bus width to calculate bandwidth
+                    mem_clock_mhz = pynvml.nvmlDeviceGetMaxClockInfo(handle, pynvml.NVML_CLOCK_MEM)
+                    # Memory bandwidth (GB/s) = (Memory Clock MHz * Memory Bus Width bits / 8) / 1000
+                    # Bus width varies by GPU, so we'll try to get it from known values
+                    bandwidth_gbs = self._get_memory_bandwidth_nvml(props, mem_clock_mhz)
+                    info["memory_bandwidth_gbs"] = bandwidth_gbs
                 except:
                     info["memory_bandwidth_gbs"] = None
 
                 pynvml.nvmlShutdown()
             except ImportError:
-                pass
+                info["power_limit_w"] = None
+                info["memory_bandwidth_gbs"] = None
             except Exception as e:
-                print(f"Warning: Could not get NVML info: {e}")
+                # Suppress warning if already shown by torch
+                pass
 
         return info
 
@@ -214,6 +228,55 @@ class GPUDetector:
         """Estimate memory bandwidth in GB/s"""
         # This is theoretical and varies by GPU model
         # For more accurate results, this should be measured
+        return None
+
+    def _get_memory_bandwidth_nvml(self, props, mem_clock_mhz: int) -> Optional[float]:
+        """Calculate memory bandwidth from NVML memory clock and known bus widths"""
+        # Memory bandwidth (GB/s) = (Memory Clock MHz * Memory Bus Width bits / 8) / 1000
+        # Common bus widths by architecture:
+        bus_width_bits = None
+
+        # Get GPU name to determine bus width
+        gpu_name = props.name.upper()
+
+        # Tesla T4 has 256-bit bus width
+        if "T4" in gpu_name:
+            bus_width_bits = 256
+        # A100 has 5120-bit HBM2
+        elif "A100" in gpu_name:
+            bus_width_bits = 5120
+        # H100 has 5120-bit HBM3
+        elif "H100" in gpu_name:
+            bus_width_bits = 5120
+        # V100 has 4096-bit HBM2
+        elif "V100" in gpu_name:
+            bus_width_bits = 4096
+        # RTX 3090 has 384-bit bus
+        elif "3090" in gpu_name:
+            bus_width_bits = 384
+        # RTX 4090 has 384-bit bus
+        elif "4090" in gpu_name:
+            bus_width_bits = 384
+        # RTX 3080 has 320-bit bus
+        elif "3080" in gpu_name:
+            bus_width_bits = 320
+        # RTX 4080 has 256-bit bus
+        elif "4080" in gpu_name:
+            bus_width_bits = 256
+        # Default estimates by compute capability
+        elif props.major == 7:  # Turing/Volta
+            bus_width_bits = 256
+        elif props.major == 8:  # Ampere
+            bus_width_bits = 320
+        elif props.major == 9:  # Hopper
+            bus_width_bits = 5120
+
+        if bus_width_bits:
+            # Calculate bandwidth: (clock * width / 8) / 1000
+            # Multiply by 2 for DDR (Double Data Rate)
+            bandwidth_gbs = (mem_clock_mhz * bus_width_bits * 2 / 8) / 1000
+            return bandwidth_gbs
+
         return None
 
     def get_device(self) -> torch.device:
